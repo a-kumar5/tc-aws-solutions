@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  This template implements an IAM user 'TinaM'
+  An S3 bucket for dog pictues
+  An S3 bucket for other animals
+  And permissions appropriate for TinaM.
+
+Parameters:
+  TinaMPassword:
+    Description: User Tina Password.
+    AllowedPattern: .+
+    NoEcho: "true"
+    Type: String
+    MinLength: 12
+  Group:
+    Description: Group Tag assigned to your project
+    AllowedPattern: .+
+    Type: String
+    Default: tc-arch
+  Project:
+    Description: Project tag assigned
+    AllowedPattern: .+
+    Type: String
+    Default: arch
+
+Resources:
+  dogpics:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: tcarch-dogpics-useast2
+  animalpics:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: tcarch-animalpics-useast2
+  TinaM:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+        - dev-build-infra
+      LoginProfile:
+        Password: !Ref TinaMPassword
+        PasswordResetRequired: "false"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/IAMUserChangePassword
+      UserName: TinaM
+      Tags:
+        - Key: "GROUP"
+          Value: !Ref Group
+        - Key: "PROJECT"
+          Value: !Ref Project
+  policy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow access to s3 buckets except dogpics
+      ManagedPolicyName: AllowAllS3ExceptDogs
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: "s3:*"
+            Resource: "*"
+          - Effect: Deny
+            Action: "s3:*"
+            Resource:
+              [!GetAtt dogpics.Arn, !Join ["", [!GetAtt dogpics.Arn, "/*"]]]
+      Roles:
+        - dev-build-infra
+
+Outputs:
+  dogpicsbucketname:
+    Description: bucket for dog pictures
+    Value: !Ref dogpics
+  animalpicsbucketname:
+    Description: bucket for animal pictures
+    Value: !Ref animalpics
+  tinamuser:
+    Description: IAM username for tina
+    Value: !Ref TinaM
